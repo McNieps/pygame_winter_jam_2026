@@ -1,0 +1,5 @@
+base_fps: 120
+confirmation_quit: true
+confirmation_leave: false
+single_use: true
+skip: false

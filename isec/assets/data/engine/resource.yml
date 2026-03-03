@@ -1,0 +1,15 @@
+surface:
+  caching:
+    enabled: true
+    default_size: 90
+
+sound:
+  master_volume: 0.5
+  music_volume: 0.5
+  max_simultaneous_sounds: 64
+
+  frequency: 44100
+  size: -16
+  channels: 2
+  buffer: 512
+  devicename: null

@@ -4,7 +4,7 @@ from typing import Union
 
 
 class OrthogonalTilemap:
-    EMPTY_TILE = 0
+    EMPTY_TILE = -1
 
     def __init__(self,
                  tilemap_array: list[list[int]],
@@ -20,8 +20,10 @@ class OrthogonalTilemap:
         :param tile_size: The size of the tiles in pixels.
         :param parallax_depth: A float that represent the parallax depth of the tilemap.
             0 is static, 1 is normal, 2 is twice the speed of the camera, etc.
-            A parallax depth > 1 will be rendered on top of the entities.
         """
+
+        if isinstance(tileset, pygame.Surface) and tile_size is None:
+            raise Exception("When passing tileset as pygame.Surface, tile_size is expected")
 
         if tile_size is None:
             tile_size = self._tile_size_from_tileset(tileset)
@@ -38,7 +40,7 @@ class OrthogonalTilemap:
 
     @staticmethod
     def _check_tileset_validity(tilemap_array: list[list[int]],
-                                tileset: dict[int: pygame.Surface | None]) -> bool:
+                                tileset: dict[int, pygame.Surface | None]) -> bool:
         """A function that check if the tileset is valid."""
 
         return all(tile in tileset
@@ -68,8 +70,6 @@ class OrthogonalTilemap:
 
         tileset = {OrthogonalTilemap.EMPTY_TILE: None}
         tileset_width, tileset_height = tileset_surface.get_size()
-
-        print(tile_size)
 
         if (tileset_surface.get_width()-tile_margin+tile_spacing) % (tile_size + tile_spacing) != 0:
             raise ValueError("Invalid tileset width")

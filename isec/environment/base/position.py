@@ -12,7 +12,7 @@ class Position(pygame.Vector2):
         self.vx = 0
         self.vy = 0
         self.damping = 0
-        self.angle = 0
+        self.a = 0
         self.angular_speed = 0
         self.angular_damping = 0
 

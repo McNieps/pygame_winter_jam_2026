@@ -24,8 +24,8 @@ class OrthogonalTilemapScene(Scene):
 
         tile_size = self.tilemap.tile_size
 
-        camera_pos = pygame.Vector2(math.floor(camera.position.x) * self.tilemap.parallax_depth,
-                                    math.floor(camera.position.y) * self.tilemap.parallax_depth)
+        camera_pos = pygame.Vector2(math.floor(camera.x) * self.tilemap.parallax_depth,
+                                    math.floor(camera.y) * self.tilemap.parallax_depth)
 
         start_x = max(0, math.floor(camera_pos[0]/tile_size))
         end_x = min(math.ceil((camera_pos[0]+self.rect.width)/tile_size), self.tilemap.width)
@@ -39,9 +39,3 @@ class OrthogonalTilemapScene(Scene):
                              for x in range(start_x, end_x)
                              for y in range(start_y, end_y)
                              if self.tilemap[y][x] != -1])
-
-        return
-
-    def update(self,
-               delta: float) -> None:
-        pass

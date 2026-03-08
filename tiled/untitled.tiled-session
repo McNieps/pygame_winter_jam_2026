@@ -3,10 +3,22 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "",
+    "activeFile": "map_test.tmj",
     "expandedProjectPaths": [
     ],
     "fileStates": {
+        "SOL_FORET.tsx": {
+            "scaleInDock": 11,
+            "scaleInEditor": 16
+        },
+        "map_test.tmj": {
+            "scale": 1.5,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 380.66666666666663,
+                "y": 153.66666666666669
+            }
+        },
         "test.tsx": {
             "dynamicWrapping": false,
             "scaleInDock": 5.5,
@@ -24,15 +36,19 @@
     "last.exportedFilePath": "C:/Users/Lucas/PycharmProjects/pygame_winter_jam_2026/game/assets/data/map",
     "last.imagePath": "C:/Users/Lucas/Desktop",
     "map.height": 50,
-    "map.lastUsedExportFilter": "CSV files (*.csv)",
+    "map.lastUsedExportFilter": "JSON map files (*.tmj *.json)",
     "map.lastUsedFormat": "json",
     "map.tileHeight": 8,
     "map.tileWidth": 8,
     "map.width": 100,
     "openFiles": [
+        "SOL_FORET.tsx",
+        "map_test.tmj"
     ],
     "project": "untitled.tiled-project",
     "recentFiles": [
+        "SOL_FORET.tsx",
+        "map_test.tmj",
         "untitled.tmx",
         "test.tsx"
     ],

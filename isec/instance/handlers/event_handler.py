@@ -7,7 +7,8 @@ class EventHandler:
                  key_dict: dict) -> None:
 
         self.events = []
-        self.mouse_rel = (0, 0)
+        self.mouse_pos = pygame.mouse.get_pos()
+        self.mouse_rel = pygame.math.Vector2()
         self._callbacks = self._create_callbacks_dict(key_dict)
         self._keyboard_cbs = {}
         self._mouse_cbs = {}
@@ -30,6 +31,7 @@ class EventHandler:
 
         self._callbacks[action]["callbacks"][action_type].add(callback)
         self.sort_callbacks()
+
 
     def register_quit_callback(self,
                                callback: typing.Callable) -> None:
@@ -55,7 +57,9 @@ class EventHandler:
 
     async def handle_events(self) -> None:
         self.events = pygame.event.get()
-        self.mouse_rel = pygame.mouse.get_rel()
+        new_mouse_pos = pygame.math.Vector2(pygame.mouse.get_pos())
+        self.mouse_rel = new_mouse_pos - self.mouse_pos
+        self.mouse_pos = new_mouse_pos
 
         for event in self.events:
             if event.type == pygame.QUIT:

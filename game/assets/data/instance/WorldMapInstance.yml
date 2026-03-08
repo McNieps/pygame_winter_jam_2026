@@ -1,1 +1,3 @@
-controls: {}
+controls:
+  escape: {key: K_ESCAPE}
+  click: {key: B_1}

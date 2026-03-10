@@ -8,8 +8,11 @@ from isec.app import Resource
 from isec.environment.scene import OrthogonalTilemapScene
 from isec.environment.base import OrthogonalTilemap, Camera
 
+from game.entities.landmarks.landmark import Landmark
 from game.entities.landmarks.village import Village
+from game.entities.landmarks.landmark_connexion import LandmarkConnexion
 from game.entities.ui.landmark_info import LandmarkInfo
+from game.entities.combat.front_snow_layer import FrontSnowLayer
 
 
 class WorldMapInstance(BaseInstance):
@@ -29,11 +32,15 @@ class WorldMapInstance(BaseInstance):
 
         self.landmarks_scene = EntityScene(60,
                                            camera=self.camera,
-                                           entities=[Village(pygame.math.Vector2(100, 100))])
+                                           entities=[Village(pygame.math.Vector2(100, 100)),
+                                                     Village(pygame.math.Vector2(220, 125))])
+
+        self.landmarks_scene.add_entities(LandmarkConnexion(*self.landmarks_scene.entities[:2]))
 
         self.ui_scene = EntityScene(60,
                                     camera=self.camera,
-                                    entities=[self.landmark_info])
+                                    entities=[self.landmark_info,
+                                              FrontSnowLayer()])
 
     async def setup(self) -> None:
         pass
@@ -57,6 +64,9 @@ class WorldMapInstance(BaseInstance):
     async def start_click(self):
         cursor_world_pos = self.event_handler.mouse_pos + self.camera
         for landmark in self.landmarks_scene.entities:
+            if not isinstance(landmark, Landmark):
+                continue
+
             if landmark.rect.collidepoint(*cursor_world_pos):
                 self.landmark_info.focus(landmark)
                 return

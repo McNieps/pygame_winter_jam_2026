@@ -30,8 +30,7 @@ class Entity:
                rect: pygame.Rect) -> None:
 
         vec = camera.get_offset(self.position)
-        self.sprite.render(surface, rect, vec, self.position.angle)
+        self.sprite.render(surface, rect, vec, self.position.a)
 
     def destroy(self) -> None:
-
         self.to_delete = True

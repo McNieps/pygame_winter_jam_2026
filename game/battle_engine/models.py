@@ -17,6 +17,7 @@ class EventTrigger(str, Enum):
     ON_DAMAGE_TAKEN   = "on_damage_taken"
     ON_WEAPON_HIT     = "on_weapon_hit"
     ON_PLAYER_STRUCK  = "on_player_struck"
+    ON_ENEMY_STRUCK   = "on_enemy_struck"
     ON_KILL           = "on_kill"
     ON_BATTLE_START   = "on_battle_start"
     ON_MODIFIER_STATE = "on_modifier_state"

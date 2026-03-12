@@ -29,14 +29,15 @@ class TriggerContext:
         source_weapon: Weapon | None = None,
         source_team: Team | None = None,
         target_team: Team | None = None,
-        damage: int = 0,
+        damage: float = 0.0,
+        struck_team_id: str | None = None,  # Team that was hit (for ON_PLAYER_STRUCK / ON_ENEMY_STRUCK)
     ):
         self.trigger = trigger
         self.source_weapon = source_weapon
         self.source_team = source_team
         self.target_team = target_team
         self.damage = damage
-
+        self.struck_team_id = struck_team_id
 
 # ---------------------------------------------------------------------------
 # Engine
@@ -237,10 +238,10 @@ class BattleEngine:
             cycle_count += 1
 
     def _resolve_trigger(
-        self,
-        state: BattleState,
-        ctx: TriggerContext,
-        events: list,
+            self,
+            state: BattleState,
+            ctx: TriggerContext,
+            events: list,
     ) -> list[TriggerContext]:
         """
         Find all modifiers listening to this trigger, sorted by priority (desc).
@@ -249,8 +250,15 @@ class BattleEngine:
         new_contexts: list[TriggerContext] = []
 
         # Collect (modifier, weapon, team) triples, across both teams
+        # ON_PLAYER_STRUCK: only modifiers owned by the struck team
+        # ON_ENEMY_STRUCK:  only modifiers owned by the team that was NOT struck
         candidates: list[tuple[Modifier, Weapon, Team]] = []
         for team in (state.team_a, state.team_b):
+            if ctx.struck_team_id is not None:
+                if ctx.trigger == EventTrigger.ON_PLAYER_STRUCK and team.id != ctx.struck_team_id:
+                    continue
+                if ctx.trigger == EventTrigger.ON_ENEMY_STRUCK and team.id == ctx.struck_team_id:
+                    continue
             for weapon in team.weapons:
                 for mod in weapon.modifiers:
                     if mod.trigger == ctx.trigger:
@@ -326,12 +334,15 @@ class BattleEngine:
     def _apply_weapon_effect(self, state, mod, effect, weapon: Weapon, events, new_contexts):
         if effect.effect_type == EffectType.REDUCE_COOLDOWN:
             old = weapon.cooldown_ticks_current
-            reduction = weapon.cooldown_ticks_max * effect.value
-            weapon.cooldown_ticks_current = max(0, weapon.cooldown_ticks_current - int(reduction))
+            reduction = effect.value
+            weapon.cooldown_ticks_current = min(weapon.cooldown_ticks_current + reduction, weapon.cooldown_ticks_max)
             events.append(CooldownChanged(
-                tick=state.tick, weapon_id=weapon.id,
-                old_value=old, new_value=weapon.cooldown_ticks_current,
-                cause=mod.name, source_weapon_id=weapon.id,
+                tick=state.tick,
+                weapon_id=weapon.id,
+                old_value=old,
+                new_value=weapon.cooldown_ticks_current,
+                cause=mod.name,
+                source_weapon_id=weapon.id,
             ))
 
         elif effect.effect_type == EffectType.SET_COOLDOWN:
@@ -382,11 +393,17 @@ class BattleEngine:
                 old_value=old, new_value=0,
             ))
 
-        events.append(EffectApplied(
-            tick=state.tick, modifier_id=mod.id, modifier_name=mod.name,
-            effect_type=effect.effect_type.value, target_id=weapon.id,
-            value=effect.value, value_str=effect.value_str,
-        ))
+        events.append(
+            EffectApplied(
+                tick=state.tick,
+                modifier_id=mod.id,
+                modifier_name=mod.name,
+                effect_type=effect.effect_type.value,
+                target_id=weapon.id,
+                value=effect.value,
+                value_str=effect.value_str,
+            )
+        )
 
     def _apply_team_effect(self, state, mod, effect, team: Team, events):
         if effect.effect_type == EffectType.HEAL:

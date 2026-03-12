@@ -89,12 +89,14 @@ class CombatInstance(BaseInstance):
                 self.team_sign[event.team_id].display_weapon_activation(event.weapon_id)
 
             elif event.type == "modifier_triggered":
+                print("i")
                 for sign in self.team_sign.values():
                     if event.modifier_id in sign.modifiers:
                         sign.modifiers[event.modifier_id].display_activation()
                         break
 
             elif event.type == "effect_applied":
+                print("i")
                 continue
 
             elif event.type == "cooldown_changed":

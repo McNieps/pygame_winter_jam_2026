@@ -7,10 +7,25 @@ from game.battle_engine.models import Team, Weapon, Modifier, ModifierEffect, Ef
 
 on_struck_mod = Modifier(
     name="Reactive Edge",
-    icon="eye",
-    description="When struck, reduce this weapon's cooldown by 20%",
+    description="When MY team is struck, reduce this weapon's cooldown by 20%",
     trigger=EventTrigger.ON_PLAYER_STRUCK,
     priority=10,
+    icon="eye",
+    effects=[
+        ModifierEffect(
+            effect_type=EffectType.REDUCE_COOLDOWN,
+            target=EffectTarget.SELF_WEAPON,
+            value=0.20,
+        )
+    ],
+)
+
+on_enemy_struck_mod = Modifier(
+    name="Predator's Rhythm",
+    description="When the ENEMY is struck, reduce this weapon's cooldown by 20%",
+    trigger=EventTrigger.ON_ENEMY_STRUCK,
+    priority=10,
+    icon="eye",
     effects=[
         ModifierEffect(
             effect_type=EffectType.REDUCE_COOLDOWN,
@@ -21,34 +36,13 @@ on_struck_mod = Modifier(
 )
 
 team_a = Team(
-    name="Team A",
-    hp=100,
-    max_hp=100,
-    weapons=[
-        Weapon(
-            name="Fast Blade",
-            icon="dagger",
-            base_damage=15,
-            cooldown_ticks_max=10,
-            modifiers=[on_struck_mod],
-        ),
-    ],
+    name="Team A", hp=100, max_hp=100,
+    weapons=[Weapon(name="Reactive Blade", base_damage=15, cooldown_ticks_max=20, modifiers=[on_struck_mod], icon="dagger")],
 )
-
 team_b = Team(
-    name="Team B",
-    hp=100,
-    max_hp=100,
-    weapons=[
-        Weapon(
-            icon="iron_bar",
-            name="Heavy Hammer",
-            base_damage=25,
-            cooldown_ticks_max=15,
-        )
-    ],
+    name="Team B", hp=100, max_hp=100,
+    weapons=[Weapon(name="Predator Axe", base_damage=12, cooldown_ticks_max=10, modifiers=[on_enemy_struck_mod], icon="dagger")],
 )
-
 
 async def main() -> None:
     App.init("game/assets/")

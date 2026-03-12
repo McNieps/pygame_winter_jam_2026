@@ -1,0 +1,3 @@
+name: Sword
+base_damage: 1
+cooldown_ticks_max: 20

@@ -12,7 +12,6 @@ from game.entities.landmarks.landmark import Landmark
 from game.entities.landmarks.village import Village
 from game.entities.landmarks.landmark_connexion import LandmarkConnexion
 from game.entities.ui.landmark_info import LandmarkInfo
-from game.entities.combat.front_snow_layer import FrontSnowLayer
 
 
 class WorldMapInstance(BaseInstance):
@@ -25,7 +24,7 @@ class WorldMapInstance(BaseInstance):
         self.camera = Camera()
         self.landmark_info = LandmarkInfo(None)
 
-        self.tilemap_scene  = OrthogonalTilemapScene(OrthogonalTilemap(Resource.data["map"]["map_test"],
+        self.tilemap_scene  = OrthogonalTilemapScene(OrthogonalTilemap(Resource.data["maps"]["map_test"],
                                                                 tileset=Resource.image["tilesets"]["tileset_snow_forest"],
                                                                 tile_size=8),
                                                      camera=self.camera)
@@ -39,8 +38,7 @@ class WorldMapInstance(BaseInstance):
 
         self.ui_scene = EntityScene(60,
                                     camera=self.camera,
-                                    entities=[self.landmark_info,
-                                              FrontSnowLayer()])
+                                    entities=[self.landmark_info])
 
     async def setup(self) -> None:
         pass
@@ -76,4 +74,3 @@ class WorldMapInstance(BaseInstance):
 
     async def stop_click(self):
         self.drag = False
-        self.clicked_entity = None

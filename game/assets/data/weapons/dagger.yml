@@ -1,0 +1,6 @@
+name: Dagger
+description: Test test
+icon: dagger
+
+base_damage: 1
+cooldown_ticks_max: 20

@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import Any
 from pydantic import BaseModel, Field
-
 import uuid
 
 
@@ -15,12 +14,12 @@ class EventTrigger(str, Enum):
     ON_WEAPON_FIRE    = "on_weapon_fire"
     ON_DAMAGE_DEALT   = "on_damage_dealt"
     ON_DAMAGE_TAKEN   = "on_damage_taken"
-    ON_WEAPON_HIT     = "on_weapon_hit"
-    ON_PLAYER_STRUCK  = "on_player_struck"
-    ON_ENEMY_STRUCK   = "on_enemy_struck"
+    ON_WEAPON_HIT     = "on_weapon_hit"       # Projectile/attack connected
+    ON_PLAYER_STRUCK  = "on_player_struck"    # Owner's team took a hit
+    ON_ENEMY_STRUCK   = "on_enemy_struck"     # Opposing team took a hit
     ON_KILL           = "on_kill"
     ON_BATTLE_START   = "on_battle_start"
-    ON_MODIFIER_STATE = "on_modifier_state"
+    ON_MODIFIER_STATE = "on_modifier_state"   # Another modifier changed state
 
 
 class EffectType(str, Enum):
@@ -34,14 +33,16 @@ class EffectType(str, Enum):
     REMOVE_STATUS        = "remove_status"     # value = status name
     INCREMENT_COUNTER    = "increment_counter" # Modifier internal state
     RESET_COUNTER        = "reset_counter"
+    RESET_COOLDOWN       = "reset_cooldown"    # Set cooldown_ticks_current to 0 (full penalty)
 
 
 class EffectTarget(str, Enum):
     """Who/what the effect applies to."""
-    SELF_WEAPON     = "self_weapon"       # Weapon this modifier is attached to
-    ALL_ALLY_WEAPONS = "all_ally_weapons"
-    ENEMY_TEAM      = "enemy_team"
-    TRIGGERING_WEAPON = "triggering_weapon"  # The weapon that caused the event
+    SELF_WEAPON          = "self_weapon"          # Weapon this modifier is attached to
+    ALL_ALLY_WEAPONS     = "all_ally_weapons"
+    ENEMY_TEAM           = "enemy_team"
+    TRIGGERING_WEAPON    = "triggering_weapon"    # The weapon that caused the event
+    RANDOM_ENEMY_WEAPON  = "random_enemy_weapon"  # One random enemy weapon (seeded RNG)
 
 
 # ---------------------------------------------------------------------------
@@ -84,18 +85,23 @@ class Modifier(BaseModel):
     condition: ModifierCondition | None = None
 
     # --- Stateful fields ---
+    counter: int = 0                           # General-purpose counter
     custom_state: dict[str, Any] = Field(default_factory=dict)
-    cooldown_ticks_current: int = 0
-    cooldown_ticks_max: int = 0
+    cooldown_ticks_current: int = 0           # Modifier's own cooldown (ticks elapsed since last trigger)
+    cooldown_ticks_max: int = 0               # 0 = no cooldown
 
+
+# ---------------------------------------------------------------------------
+# Weapon
+# ---------------------------------------------------------------------------
 
 class Weapon(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     icon: str = None
-    base_damage: int
-    cooldown_ticks_current: int = 0
+    base_damage: float
     cooldown_ticks_max: int         # Ticks between fires
+    cooldown_ticks_current: int = 0
     modifiers: list[Modifier] = Field(default_factory=list, max_length=3)
     statuses: list[str] = Field(default_factory=list)
 
@@ -104,11 +110,15 @@ class Weapon(BaseModel):
         return self.cooldown_ticks_current >= self.cooldown_ticks_max
 
 
+# ---------------------------------------------------------------------------
+# Team
+# ---------------------------------------------------------------------------
+
 class Team(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    hp: int
-    max_hp: int
+    hp: float
+    max_hp: float
     weapons: list[Weapon] = Field(default_factory=list, max_length=3)
     statuses: list[str] = Field(default_factory=list)
 
@@ -129,3 +139,4 @@ class BattleState(BaseModel):
     is_over: bool = False
     winner_id: str | None = None
     max_cycles_guard: int = 100   # Max event chain depth per tick (anti-loop)
+    rng_seed: int = 0             # Seed advanced each time RNG is consumed — keeps client/server in sync

@@ -6,6 +6,7 @@ Stateless between calls — pass in a BattleState, get back (BattleState, list[e
 
 from collections import deque
 from copy import deepcopy
+import random
 
 from .models import (
     BattleState, Team, Weapon, Modifier,
@@ -39,6 +40,7 @@ class TriggerContext:
         self.damage = damage
         self.struck_team_id = struck_team_id
 
+
 # ---------------------------------------------------------------------------
 # Engine
 # ---------------------------------------------------------------------------
@@ -60,38 +62,38 @@ class BattleEngine:
             return state, []
 
         state = deepcopy(state)   # Never mutate the input
-        events: list[AnyBattleEvent] = [TickAdvanced(tick=state.tick)]
+        events: list[AnyBattleEvent] = []
+        rng = random.Random(state.rng_seed)  # Seeded — deterministic across client/server
+
+        events.append(TickAdvanced(tick=state.tick))
 
         # 1. Advance cooldowns and collect weapons ready to fire
-        self._advance_cooldowns(state, events)
+        self._advance_cooldowns(state, events, rng)
 
         # 2. Fire ready weapons
-        self._fire_weapons(state, events)
+        self._fire_weapons(state, events, rng)
 
         # 3. Check end condition
         self._check_end(state, events)
 
         state.tick += 1
+        state.rng_seed = rng.randint(0, 2**32)  # Advance seed for next tick
         return state, events
 
     # -----------------------------------------------------------------------
     # Phase 1 — Cooldown tick
     # -----------------------------------------------------------------------
 
-    def _advance_cooldowns(self, state: BattleState, events: list) -> None:
+    def _advance_cooldowns(self, state: BattleState, events: list, rng: random.Random) -> None:
         for team in (state.team_a, state.team_b):
             for weapon in team.weapons:
-                old_weapon_cd = weapon.cooldown_ticks_current
+                # Increment elapsed ticks, capped at max so is_ready stays stable
                 if weapon.cooldown_ticks_current < weapon.cooldown_ticks_max:
                     weapon.cooldown_ticks_current += 1
-                    events.append(CooldownChanged(tick=state.tick,
-                                                  weapon_id=weapon.id,
-                                                  old_value=old_weapon_cd,
-                                                  new_value=weapon.cooldown_ticks_current))
 
-                # Tick modifier cooldowns
+                # Tick modifier cooldowns (elapsed time, same convention)
                 for mod in weapon.modifiers:
-                    if mod.cooldown_ticks_current > mod.cooldown_ticks_max:
+                    if mod.cooldown_ticks_max > 0 and mod.cooldown_ticks_current < mod.cooldown_ticks_max:
                         old = mod.cooldown_ticks_current
                         mod.cooldown_ticks_current += 1
                         events.append(ModifierStateChanged(
@@ -106,13 +108,13 @@ class BattleEngine:
 
         # ON_TICK trigger
         ctx = TriggerContext(trigger=EventTrigger.ON_TICK)
-        self._dispatch_trigger(state, ctx, events)
+        self._dispatch_trigger(state, ctx, events, rng)
 
     # -----------------------------------------------------------------------
     # Phase 2 — Fire weapons
     # -----------------------------------------------------------------------
 
-    def _fire_weapons(self, state: BattleState, events: list) -> None:
+    def _fire_weapons(self, state: BattleState, events: list, rng: random.Random) -> None:
         pairs = [
             (state.team_a, state.team_b),
             (state.team_b, state.team_a),
@@ -123,15 +125,6 @@ class BattleEngine:
                     continue
                 if not attacker.is_alive or not defender.is_alive:
                     break
-
-                # Reset cooldown
-                weapon.cooldown_ticks_current = 0
-                events.append(CooldownChanged(
-                    tick=state.tick,
-                    weapon_id=weapon.id,
-                    old_value=weapon.cooldown_ticks_current,
-                    new_value=0,
-                ))
 
                 events.append(WeaponFired(
                     tick=state.tick,
@@ -149,14 +142,14 @@ class BattleEngine:
                     source_team=attacker,
                     target_team=defender,
                 )
-                self._dispatch_trigger(state, ctx_fire, events)
+                self._dispatch_trigger(state, ctx_fire, events, rng)
 
                 # Compute and apply damage
                 damage = weapon.base_damage
-                self._apply_damage(state, weapon, attacker, defender, damage, events)
+                self._apply_damage(state, weapon, attacker, defender, damage, events, rng)
 
-                # Reset cooldown
-                weapon.cooldown_ticks_current = 0
+                # Reset elapsed counter — weapon just fired, must wait full cooldown again
+                weapon.cooldown_ticks_current -= weapon.cooldown_ticks_max
 
     def _apply_damage(
         self,
@@ -164,12 +157,12 @@ class BattleEngine:
         weapon: Weapon,
         attacker: Team,
         defender: Team,
-        damage: int,
+        damage: float,
         events: list,
+        rng: random.Random,
     ) -> None:
-
         hp_before = defender.hp
-        defender.hp = max(0, defender.hp - damage)
+        defender.hp = max(0.0, defender.hp - damage)
 
         events.append(DamageDone(
             tick=state.tick,
@@ -186,17 +179,26 @@ class BattleEngine:
         self._dispatch_trigger(state, TriggerContext(
             trigger=EventTrigger.ON_DAMAGE_DEALT,
             source_weapon=weapon, source_team=attacker, target_team=defender, damage=damage,
-        ), events)
+        ), events, rng)
 
-        # ON_DAMAGE_TAKEN + ON_PLAYER_STRUCK (defender side)
+        # ON_DAMAGE_TAKEN (no ownership filter — generic)
         self._dispatch_trigger(state, TriggerContext(
             trigger=EventTrigger.ON_DAMAGE_TAKEN,
             source_team=defender, target_team=attacker, damage=damage,
-        ), events)
+            struck_team_id=defender.id,
+        ), events, rng)
+        # ON_PLAYER_STRUCK — only fires on modifiers owned by the struck team
         self._dispatch_trigger(state, TriggerContext(
             trigger=EventTrigger.ON_PLAYER_STRUCK,
             source_team=defender, target_team=attacker, damage=damage,
-        ), events)
+            struck_team_id=defender.id,
+        ), events, rng)
+        # ON_ENEMY_STRUCK — only fires on modifiers owned by the attacking team
+        self._dispatch_trigger(state, TriggerContext(
+            trigger=EventTrigger.ON_ENEMY_STRUCK,
+            source_weapon=weapon, source_team=attacker, target_team=defender, damage=damage,
+            struck_team_id=defender.id,
+        ), events, rng)
 
         if not defender.is_alive:
             events.append(TeamDefeated(
@@ -205,8 +207,11 @@ class BattleEngine:
                 team_name=defender.name,
             ))
 
-    @staticmethod
-    def _check_end(state: BattleState, events: list) -> None:
+    # -----------------------------------------------------------------------
+    # Phase 3 — End check
+    # -----------------------------------------------------------------------
+
+    def _check_end(self, state: BattleState, events: list) -> None:
         a_alive = state.team_a.is_alive
         b_alive = state.team_b.is_alive
 
@@ -216,14 +221,26 @@ class BattleEngine:
                 state.winner_id = state.team_a.id
             elif b_alive and not a_alive:
                 state.winner_id = state.team_b.id
+            # Both dead = draw, winner_id stays None
 
             events.append(BattleEnded(tick=state.tick, winner_id=state.winner_id))
 
-    def _dispatch_trigger(self,
-                          state: BattleState,
-                          initial_ctx: TriggerContext,
-                          events: list) -> None:
+    # -----------------------------------------------------------------------
+    # Trigger dispatch — breadth-first, priority-ordered, cycle-guarded
+    # -----------------------------------------------------------------------
 
+    def _dispatch_trigger(
+        self,
+        state: BattleState,
+        initial_ctx: TriggerContext,
+        events: list,
+        rng: random.Random,
+    ) -> None:
+        """
+        Breadth-first event resolution.
+        All modifiers reacting to the current wave fire before any
+        downstream triggers they produce are processed.
+        """
         queue: deque[TriggerContext] = deque([initial_ctx])
         cycle_count = 0
 
@@ -233,15 +250,16 @@ class BattleEngine:
                 break
 
             ctx = queue.popleft()
-            new_contexts = self._resolve_trigger(state, ctx, events)
+            new_contexts = self._resolve_trigger(state, ctx, events, rng)
             queue.extend(new_contexts)
             cycle_count += 1
 
     def _resolve_trigger(
-            self,
-            state: BattleState,
-            ctx: TriggerContext,
-            events: list,
+        self,
+        state: BattleState,
+        ctx: TriggerContext,
+        events: list,
+        rng: random.Random,
     ) -> list[TriggerContext]:
         """
         Find all modifiers listening to this trigger, sorted by priority (desc).
@@ -270,8 +288,8 @@ class BattleEngine:
         for mod, weapon, team in candidates:
             if not self._check_condition(mod, weapon, team, ctx):
                 continue
-            if mod.cooldown_ticks_current < mod.cooldown_ticks_max:
-                continue  # Modifier on cooldown
+            if mod.cooldown_ticks_max > 0 and mod.cooldown_ticks_current < mod.cooldown_ticks_max:
+                continue  # Modifier on cooldown (elapsed < max means not ready)
 
             events.append(ModifierTriggered(
                 tick=state.tick,
@@ -284,11 +302,11 @@ class BattleEngine:
             ))
 
             downstream = self._apply_modifier_effects(
-                state, mod, weapon, team, ctx, events
+                state, mod, weapon, team, ctx, events, rng
             )
             new_contexts.extend(downstream)
 
-            # Start modifier cooldown if configured
+            # Reset modifier elapsed counter — just triggered, must wait full cooldown again
             if mod.cooldown_ticks_max > 0:
                 old = mod.cooldown_ticks_current
                 mod.cooldown_ticks_current = 0
@@ -316,26 +334,26 @@ class BattleEngine:
         team: Team,
         ctx: TriggerContext,
         events: list,
+        rng: random.Random,
     ) -> list[TriggerContext]:
         """Apply all effects of a modifier. Returns any new trigger contexts."""
         new_contexts: list[TriggerContext] = []
 
         for effect in mod.effects:
-            targets = self._resolve_targets(state, effect.target, weapon, team, ctx)
+            targets = self._resolve_targets(state, effect.target, weapon, team, ctx, rng)
 
             for target in targets:
                 if isinstance(target, Weapon):
-                    self._apply_weapon_effect(state, mod, effect, target, events, new_contexts)
+                    self._apply_weapon_effect(state, mod, effect, target, events, new_contexts, rng)
                 elif isinstance(target, Team):
                     self._apply_team_effect(state, mod, effect, target, events)
 
         return new_contexts
 
-    def _apply_weapon_effect(self, state, mod, effect, weapon: Weapon, events, new_contexts):
+    def _apply_weapon_effect(self, state, mod, effect, weapon: Weapon, events, new_contexts, rng: random.Random):
         if effect.effect_type == EffectType.REDUCE_COOLDOWN:
             old = weapon.cooldown_ticks_current
-            reduction = effect.value
-            weapon.cooldown_ticks_current = min(weapon.cooldown_ticks_current + reduction, weapon.cooldown_ticks_max)
+            weapon.cooldown_ticks_current += effect.value
             events.append(CooldownChanged(
                 tick=state.tick,
                 weapon_id=weapon.id,
@@ -393,17 +411,20 @@ class BattleEngine:
                 old_value=old, new_value=0,
             ))
 
-        events.append(
-            EffectApplied(
-                tick=state.tick,
-                modifier_id=mod.id,
-                modifier_name=mod.name,
-                effect_type=effect.effect_type.value,
-                target_id=weapon.id,
-                value=effect.value,
-                value_str=effect.value_str,
-            )
-        )
+        elif effect.effect_type == EffectType.RESET_COOLDOWN:
+            old_val = weapon.cooldown_ticks_current
+            weapon.cooldown_ticks_current = 0
+            events.append(CooldownChanged(
+                tick=state.tick, weapon_id=weapon.id,
+                old_value=old_val, new_value=0,
+                cause=mod.name, source_weapon_id=weapon.id,
+            ))
+
+        events.append(EffectApplied(
+            tick=state.tick, modifier_id=mod.id, modifier_name=mod.name,
+            effect_type=effect.effect_type.value, target_id=weapon.id,
+            value=effect.value, value_str=effect.value_str,
+        ))
 
     def _apply_team_effect(self, state, mod, effect, team: Team, events):
         if effect.effect_type == EffectType.HEAL:
@@ -442,6 +463,7 @@ class BattleEngine:
         weapon: Weapon,
         team: Team,
         ctx: TriggerContext,
+        rng: random.Random,
     ) -> list[Weapon | Team]:
         if target_type == EffectTarget.SELF_WEAPON:
             return [weapon]
@@ -454,6 +476,12 @@ class BattleEngine:
 
         elif target_type == EffectTarget.TRIGGERING_WEAPON:
             return [ctx.source_weapon] if ctx.source_weapon else []
+
+        elif target_type == EffectTarget.RANDOM_ENEMY_WEAPON:
+            enemy = state.team_b if team.id == state.team_a.id else state.team_a
+            if enemy.weapons:
+                return [rng.choice(enemy.weapons)]
+            return []
 
         return []
 
@@ -475,7 +503,7 @@ class BattleEngine:
         attr_map = {
             "counter": mod.counter,
             "hp_pct": team.hp / team.max_hp if team.max_hp > 0 else 0,
-            "cooldown_current": weapon.cooldown_ticks_current,
+            "cooldown_remaining": weapon.cooldown_ticks_current,
         }
 
         actual = attr_map.get(c.attribute)

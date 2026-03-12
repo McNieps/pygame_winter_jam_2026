@@ -37,7 +37,7 @@ class HealthBar(Entity):
             self.current_health = health_value
 
         self.text_surf.fill(Resource.data["colors"][2])
-        text = self.FONT.render(f"{self.current_health}/{self.max_health}", False, Resource.data["colors"][1])
+        text = self.FONT.render(f"{int(self.current_health)}/{int(self.max_health)}", False, Resource.data["colors"][1])
         rect = text.get_rect()
         rect.center = 23, 5
         self.text_surf.blit(text, rect)

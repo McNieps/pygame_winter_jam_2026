@@ -15,7 +15,7 @@ on_struck_mod = Modifier(
         ModifierEffect(
             effect_type=EffectType.REDUCE_COOLDOWN,
             target=EffectTarget.SELF_WEAPON,
-            value=0.20,
+            value=5,
         )
     ],
 )
@@ -30,7 +30,7 @@ on_enemy_struck_mod = Modifier(
         ModifierEffect(
             effect_type=EffectType.REDUCE_COOLDOWN,
             target=EffectTarget.SELF_WEAPON,
-            value=0.20,
+            value=3,
         )
     ],
 )
@@ -41,7 +41,7 @@ team_a = Team(
 )
 team_b = Team(
     name="Team B", hp=100, max_hp=100,
-    weapons=[Weapon(name="Predator Axe", base_damage=12, cooldown_ticks_max=10, modifiers=[on_enemy_struck_mod], icon="dagger")],
+    weapons=[Weapon(name="Predator Axe", base_damage=12, cooldown_ticks_max=12, modifiers=[on_enemy_struck_mod], icon="dagger")],
 )
 
 async def main() -> None:

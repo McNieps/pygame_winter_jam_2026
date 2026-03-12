@@ -18,7 +18,7 @@ class WeaponSlot(Entity):
                  weapon: Weapon) -> None:
 
         self.weapon = weapon
-        self.cooldown_remaining: float = 0
+        self.cooldown_remaining: int = 0
         if not 0 <= weapon_slot < 3:
             raise ValueError(f"Weapon slot must be between 0-2  {weapon_slot}")
 
@@ -31,6 +31,9 @@ class WeaponSlot(Entity):
 
         self.oscillator = Oscillator(spring_rigidity=2000, damping=0.0001)
         self.position.a += (random.random()*2-1)*self.BASE_ROTATION_AMPLITUDE
+
+    def increment_cooldown(self) -> None:
+        self.cooldown_remaining += 1
 
     def update(self,
                delta: float) -> None:
@@ -54,6 +57,7 @@ class WeaponSlot(Entity):
 
     def display_activation(self) -> None:
         self.oscillator.impulse((random.randint(0, 1)*2-1)*750)
+        self.cooldown_remaining -= self.weapon.cooldown_ticks_max
 
     def render(self,
                camera: Camera,

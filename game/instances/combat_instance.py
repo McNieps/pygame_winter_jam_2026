@@ -76,33 +76,39 @@ class CombatInstance(BaseInstance):
     def handle_tick_events(self, events: list[BattleEvent]):
         self.tick += 1
 
+
+
         for event in events:
-            if event.type == "damage_done":
+            if event.type == "tick_advanced":
+                self.iron_bar.set_snow_progression(self.tick/100)
+                for sign in self.team_sign.values():
+                    for weapon in sign.weapons:
+                        sign.weapons[weapon].increment_cooldown()
+
+            elif event.type == "damage_done":
                 team_health_bar = self.team_health[event.target_team_id]
                 team_health_bar.update_health(event.target_hp_after)
                 self.team_sign[event.target_team_id].shake_sign(event.final_damage/team_health_bar.max_health)
 
-            elif event.type == "tick_advanced":
-                self.iron_bar.set_snow_progression(self.tick/100)
 
             elif event.type == "weapon_fired":
                 self.team_sign[event.team_id].display_weapon_activation(event.weapon_id)
 
             elif event.type == "modifier_triggered":
-                print("i")
                 for sign in self.team_sign.values():
                     if event.modifier_id in sign.modifiers:
                         sign.modifiers[event.modifier_id].display_activation()
                         break
 
             elif event.type == "effect_applied":
-                print("i")
+                print(f"effect {event=}")
                 continue
 
             elif event.type == "cooldown_changed":
+                print(f"cooldown {event=}")
                 for sign in self.team_sign.values():
                     if event.weapon_id in sign.weapons:
-                        sign.weapons[event.weapon_id].cooldown_remaining = event.new_value
+                        sign.weapons[event.weapon_id].cooldown_remaining += event.new_value-event.old_value
 
             else:
                 print(event)

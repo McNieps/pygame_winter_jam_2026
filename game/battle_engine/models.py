@@ -33,7 +33,9 @@ class EffectType(str, Enum):
     REMOVE_STATUS        = "remove_status"     # value = status name
     INCREMENT_COUNTER    = "increment_counter" # Modifier internal state
     RESET_COUNTER        = "reset_counter"
-    RESET_COOLDOWN       = "reset_cooldown"    # Set cooldown_ticks_current to 0 (full penalty)
+    RESET_COOLDOWN            = "reset_cooldown"            # Set cooldown_ticks_current to 0 (full penalty)
+    INCREMENT_WEAPON_COUNTER  = "increment_weapon_counter"  # value_str = key in weapon.custom_state
+    RESET_WEAPON_COUNTER      = "reset_weapon_counter"      # value_str = key in weapon.custom_state
 
 
 class EffectTarget(str, Enum):
@@ -104,6 +106,7 @@ class Weapon(BaseModel):
     cooldown_ticks_current: int = 0
     modifiers: list[Modifier] = Field(default_factory=list, max_length=3)
     statuses: list[str] = Field(default_factory=list)
+    custom_state: dict[str, Any] = Field(default_factory=dict)  # Shared blackboard for modifiers
 
     @property
     def is_ready(self) -> bool:

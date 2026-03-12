@@ -149,7 +149,7 @@ class BattleEngine:
                 self._apply_damage(state, weapon, attacker, defender, damage, events, rng)
 
                 # Reset elapsed counter — weapon just fired, must wait full cooldown again
-                weapon.cooldown_ticks_current -= weapon.cooldown_ticks_max
+                weapon.cooldown_ticks_current = 0
 
     def _apply_damage(
         self,
@@ -353,14 +353,12 @@ class BattleEngine:
     def _apply_weapon_effect(self, state, mod, effect, weapon: Weapon, events, new_contexts, rng: random.Random):
         if effect.effect_type == EffectType.REDUCE_COOLDOWN:
             old = weapon.cooldown_ticks_current
-            weapon.cooldown_ticks_current += effect.value
+            reduction = weapon.cooldown_ticks_max * effect.value
+            weapon.cooldown_ticks_current = max(0, weapon.cooldown_ticks_current - int(reduction))
             events.append(CooldownChanged(
-                tick=state.tick,
-                weapon_id=weapon.id,
-                old_value=old,
-                new_value=weapon.cooldown_ticks_current,
-                cause=mod.name,
-                source_weapon_id=weapon.id,
+                tick=state.tick, weapon_id=weapon.id,
+                old_value=old, new_value=weapon.cooldown_ticks_current,
+                cause=mod.name, source_weapon_id=weapon.id,
             ))
 
         elif effect.effect_type == EffectType.SET_COOLDOWN:
@@ -418,6 +416,26 @@ class BattleEngine:
                 tick=state.tick, weapon_id=weapon.id,
                 old_value=old_val, new_value=0,
                 cause=mod.name, source_weapon_id=weapon.id,
+            ))
+
+        elif effect.effect_type == EffectType.INCREMENT_WEAPON_COUNTER:
+            key = effect.value_str
+            old_val = weapon.custom_state.get(key, 0)
+            weapon.custom_state[key] = old_val + 1
+            events.append(ModifierStateChanged(
+                tick=state.tick, modifier_id=mod.id, modifier_name=mod.name,
+                weapon_id=weapon.id, attribute=f"weapon.{key}",
+                old_value=old_val, new_value=weapon.custom_state[key],
+            ))
+
+        elif effect.effect_type == EffectType.RESET_WEAPON_COUNTER:
+            key = effect.value_str
+            old_val = weapon.custom_state.get(key, 0)
+            weapon.custom_state[key] = 0
+            events.append(ModifierStateChanged(
+                tick=state.tick, modifier_id=mod.id, modifier_name=mod.name,
+                weapon_id=weapon.id, attribute=f"weapon.{key}",
+                old_value=old_val, new_value=0,
             ))
 
         events.append(EffectApplied(
@@ -507,8 +525,10 @@ class BattleEngine:
         }
 
         actual = attr_map.get(c.attribute)
+        if actual is None and c.attribute.startswith("weapon."):
+            key = c.attribute[len("weapon."):]
+            actual = weapon.custom_state.get(key)
         if actual is None:
-            # Fall back to modifier custom_state
             actual = mod.custom_state.get(c.attribute)
         if actual is None:
             return False

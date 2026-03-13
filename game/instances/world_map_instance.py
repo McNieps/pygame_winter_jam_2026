@@ -11,7 +11,7 @@ from game.entities.ui.landmark_connexion import LandmarkConnexion
 from game.entities.ui.landmark_info import LandmarkInfo
 from game.world_gen import MapGenerator
 from game.entities.combat.back_snow_layer import BackSnowLayer as FrontSnowLayer
-
+from game.entities.player import Player
 
 class WorldMapInstance(BaseInstance):
     def __init__(self, map_name: str) -> None:
@@ -20,7 +20,6 @@ class WorldMapInstance(BaseInstance):
         self.drag = False
         self.bg_color = Resource.data["colors"][0]
         self.camera = Camera()
-        self.landmark_info = LandmarkInfo(None)
         self.landmarks: List[List[Landmark]] = []
         self.map_layout = MapGenerator()
 
@@ -59,18 +58,13 @@ class WorldMapInstance(BaseInstance):
         self.map_layout.generate_structure(len(landmarks_per_step), landmarks_per_step)
         self.map_layout.generate_map_layout(passage_points)
         self.map_layout.affect_node_type()
-        # self.route = ConcreteRoute(passage_points=passage_points)
-        # self.route.build()
-        # self.route.graph.assign_landmarks()
 
     def _create_scenes(self) -> None:
-        """Create all rendering scenes: tilemap, landmarks, connections, UI."""
         self._create_tilemap_scene()
         self._create_landmarks_and_connections()
         self._create_ui_scene()
 
     def _create_tilemap_scene(self) -> None:
-        """Set up the orthogonal tilemap scene."""
         tileset = Resource.image["tilesets"]["tileset_snow_forest"]
         tilemap = OrthogonalTilemap(
             self.tilemap_array,
@@ -85,11 +79,11 @@ class WorldMapInstance(BaseInstance):
         self.landmarks = []
 
         # Create landmarks
-        for layer in self.map_layout.map:
+        for layer_index, layer in enumerate(self.map_layout.map):
             landmark_column = []
-            for landmark_node in layer:
+            for node_index, landmark_node in enumerate(layer):
                 pos = pygame.math.Vector2(landmark_node.position)
-                landmark = landmark_dict[landmark_node.name](pos)
+                landmark = landmark_dict[landmark_node.name](pos, (layer_index, node_index))
                 landmark_column.append(landmark)
                 self.landmarks_scene.add_entities(landmark)
             self.landmarks.append(landmark_column)
@@ -107,10 +101,13 @@ class WorldMapInstance(BaseInstance):
 
     def _create_ui_scene(self) -> None:
         """Set up the UI scene (landmark info panel)."""
+        self.player = Player(self.landmarks[0][0])
+        self.landmark_info = LandmarkInfo(self.player, self.map_layout)
+
         self.ui_scene = EntityScene(
             self.fps,
             camera=self.camera,
-            entities=[self.landmark_info, ]
+            entities=[self.player, self.landmark_info, self.landmark_info.go_button]
         )
         self.snow_layer = FrontSnowLayer()
         self.snow_front_scene = EntityScene(
@@ -140,6 +137,12 @@ class WorldMapInstance(BaseInstance):
     async def _start_click(self) -> None:
         """Handle mouse button down: check landmark click or start drag."""
         cursor_world = self.event_handler.mouse_pos + self.camera
+
+        if self.landmark_info.go_button.active and self.landmark_info.go_button.rect.collidepoint(*cursor_world):
+            self.player.move(self.landmark_info.landmark_focused)
+            self.landmark_info.unfocus()
+            Resource.sound["snow"].play()
+            return
 
         for entity in self.landmarks_scene.entities:
             if isinstance(entity, Landmark) and entity.rect.collidepoint(*cursor_world):

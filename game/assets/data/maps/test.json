@@ -1,12 +1,4 @@
 { "compressionlevel":-1,
- "editorsettings":
-    {
-     "export":
-        {
-         "format":"json",
-         "target":"..\/game\/assets\/data\/maps\/test.json"
-        }
-    },
  "height":50,
  "infinite":false,
  "layers":[
@@ -234,8 +226,133 @@
  "tileheight":8,
  "tilesets":[
         {
+         "columns":6,
          "firstgid":1,
-         "source":"SOL_FORET.tsx"
+         "image":"..\/..\/..\/..\/..\/..\/Desktop\/tilemap_1.png",
+         "imageheight":32,
+         "imagewidth":48,
+         "margin":0,
+         "name":"SOL_FORET",
+         "spacing":0,
+         "tilecount":24,
+         "tileheight":8,
+         "tilewidth":8,
+         "wangsets":[
+                {
+                 "colors":[
+                        {
+                         "color":"#ff0000",
+                         "name":"SOL",
+                         "probability":1,
+                         "tile":-1
+                        }, 
+                        {
+                         "color":"#00ff00",
+                         "name":"FORET",
+                         "probability":1,
+                         "tile":-1
+                        }],
+                 "name":"SOL_FORET",
+                 "tile":-1,
+                 "type":"corner",
+                 "wangtiles":[
+                        {
+                         "tileid":0,
+                         "wangid":[0, 1, 0, 1, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":1,
+                         "wangid":[0, 1, 0, 1, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":2,
+                         "wangid":[0, 1, 0, 1, 0, 2, 0, 1]
+                        }, 
+                        {
+                         "tileid":3,
+                         "wangid":[0, 2, 0, 2, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":4,
+                         "wangid":[0, 1, 0, 2, 0, 2, 0, 2]
+                        }, 
+                        {
+                         "tileid":5,
+                         "wangid":[0, 1, 0, 2, 0, 2, 0, 1]
+                        }, 
+                        {
+                         "tileid":6,
+                         "wangid":[0, 1, 0, 1, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":7,
+                         "wangid":[0, 1, 0, 1, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":8,
+                         "wangid":[0, 1, 0, 2, 0, 1, 0, 2]
+                        }, 
+                        {
+                         "tileid":9,
+                         "wangid":[0, 2, 0, 2, 0, 2, 0, 1]
+                        }, 
+                        {
+                         "tileid":10,
+                         "wangid":[0, 2, 0, 2, 0, 2, 0, 2]
+                        }, 
+                        {
+                         "tileid":11,
+                         "wangid":[0, 2, 0, 1, 0, 2, 0, 2]
+                        }, 
+                        {
+                         "tileid":12,
+                         "wangid":[0, 1, 0, 1, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":13,
+                         "wangid":[0, 1, 0, 1, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":14,
+                         "wangid":[0, 2, 0, 1, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":15,
+                         "wangid":[0, 2, 0, 1, 0, 1, 0, 2]
+                        }, 
+                        {
+                         "tileid":16,
+                         "wangid":[0, 2, 0, 2, 0, 1, 0, 2]
+                        }, 
+                        {
+                         "tileid":17,
+                         "wangid":[0, 1, 0, 1, 0, 2, 0, 2]
+                        }, 
+                        {
+                         "tileid":18,
+                         "wangid":[0, 1, 0, 1, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":19,
+                         "wangid":[0, 1, 0, 1, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":20,
+                         "wangid":[0, 1, 0, 1, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":21,
+                         "wangid":[0, 1, 0, 2, 0, 1, 0, 1]
+                        }, 
+                        {
+                         "tileid":22,
+                         "wangid":[0, 2, 0, 1, 0, 2, 0, 1]
+                        }, 
+                        {
+                         "tileid":23,
+                         "wangid":[0, 1, 0, 1, 0, 1, 0, 2]
+                        }]
+                }]
         }],
  "tilewidth":8,
  "type":"map",

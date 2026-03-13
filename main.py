@@ -81,7 +81,7 @@ team_b = Team(
 
 async def main() -> None:
     App.init("game/assets/")
-    await CombatInstance(team_a, team_b).execute()
-    # await WorldMapInstance().execute()
+    # await CombatInstance(team_a, team_b).execute()
+    await WorldMapInstance("test").execute()
 
 asyncio.run(main())

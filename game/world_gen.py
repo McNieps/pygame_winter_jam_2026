@@ -47,17 +47,24 @@ class RouteGraph(BaseModel):
 
 
 def _connect_columns(
-    src: list[LandmarkNode],
-    dst: list[LandmarkNode],
-    rng: random.Random,
+        src: list[LandmarkNode],
+        dst: list[LandmarkNode],
+        rng: random.Random,
 ) -> None:
     """
     Order-preserving connection between two columns.
     Guarantees every node has at least one edge in and one edge out.
+
+    Crossing-free invariant: if edge (si -> di) exists, then no edge
+    (si2 -> di2) may exist where si2 > si and di2 < di (or si2 < si and di2 > di).
+    We enforce this by tracking, for each si, the allowed dst range:
+      - min_di[si] = max dst index reached by any src < si
+      - max_di[si] = min dst index reached by any src > si
     """
     n_src, n_dst = len(src), len(dst)
     si, di = 0, 0
 
+    # Coverage walk — guaranteed crossing-free by construction (monotone)
     while si < n_src and di < n_dst:
         src[si].add_destination(dst[di].column, dst[di].index)
         if si == n_src - 1:
@@ -70,9 +77,24 @@ def _connect_columns(
             else:
                 di += 1
 
-    # Optional extra edges (still order-preserving)
+    # Build per-src the current [min_di, max_di] allowed range from existing edges
+    # min_di[si] = highest dst index used by any src index < si  (can't go below this)
+    # max_di[si] = lowest  dst index used by any src index > si  (can't go above this)
+    def _allowed_range(si: int) -> tuple[int, int]:
+        lo = max(
+            (max(di for _, di in src[prev].destinations) for prev in range(si) if src[prev].destinations),
+            default=0,
+        )
+        hi = min(
+            (min(di for _, di in src[nxt].destinations) for nxt in range(si + 1, n_src) if src[nxt].destinations),
+            default=n_dst - 1,
+        )
+        return lo, hi
+
+    # Optional extra edges — only within the allowed range
     for si, s_node in enumerate(src):
-        for di in range(si, min(si + 2, n_dst)):
+        lo, hi = _allowed_range(si)
+        for di in range(lo, min(hi + 1, n_dst)):
             if (dst[di].column, dst[di].index) not in s_node.destinations:
                 if rng.random() < 0.3:
                     s_node.add_destination(dst[di].column, dst[di].index)

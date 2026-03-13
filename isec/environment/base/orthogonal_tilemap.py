@@ -4,7 +4,7 @@ from typing import Union
 
 
 class OrthogonalTilemap:
-    EMPTY_TILE = -1
+    EMPTY_TILE = 0
 
     def __init__(self,
                  tilemap_array: list[list[int]],

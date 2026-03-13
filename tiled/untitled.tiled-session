@@ -33,7 +33,7 @@
             }
         }
     },
-    "last.exportedFilePath": "C:/Users/Lucas/PycharmProjects/pygame_winter_jam_2026/game/assets/data/map",
+    "last.exportedFilePath": "C:/Users/Lucas/PycharmProjects/pygame_winter_jam_2026/game/assets/data/maps",
     "last.imagePath": "C:/Users/Lucas/Desktop",
     "map.height": 50,
     "map.lastUsedExportFilter": "JSON map files (*.tmj *.json)",
@@ -46,6 +46,7 @@
         "map_test.tmj"
     ],
     "project": "untitled.tiled-project",
+    "property.type": "int",
     "recentFiles": [
         "SOL_FORET.tsx",
         "map_test.tmj",

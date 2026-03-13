@@ -1,40 +1,66 @@
 import pygame
 
-from isec.environment import EntityScene
-from isec.instance.base_instance import BaseInstance
 from isec.app import Resource
+from isec.instance.base_instance import BaseInstance
 
-
-from isec.environment.scene import OrthogonalTilemapScene
+from isec.environment.scene import OrthogonalTilemapScene, EntityScene
 from isec.environment.base import OrthogonalTilemap, Camera
 
 from game.entities.landmarks.landmark import Landmark
 from game.entities.landmarks.village import Village
 from game.entities.landmarks.landmark_connexion import LandmarkConnexion
 from game.entities.ui.landmark_info import LandmarkInfo
+from game.world_gen import ConcreteRoute, PassagePoint
 
 
 class WorldMapInstance(BaseInstance):
-    def __init__(self):
+    def __init__(self, map_name: str):
         super().__init__()
+        self.map_name = map_name
         self.drag = False
         self.event_handler.register_callback("click", "down", self.start_click)
         self.event_handler.register_callback("click", "up", self.stop_click)
         self.bg_color = Resource.data["colors"][0]
         self.camera = Camera()
         self.landmark_info = LandmarkInfo(None)
+        self.landmarks: list[list[Landmark]] = []
 
-        self.tilemap_scene  = OrthogonalTilemapScene(OrthogonalTilemap(Resource.data["maps"]["map_test"],
-                                                                tileset=Resource.image["tilesets"]["tileset_snow_forest"],
-                                                                tile_size=8),
-                                                     camera=self.camera)
+        tilemap_layer, passage_layer = Resource.data["maps"][map_name]["layers"][:2]
+        tilemap_array = [tilemap_layer["data"][i:i + tilemap_layer["width"]] for i in range(0, len(tilemap_layer["data"]), tilemap_layer["width"])]
+
+        passage_points = []
+        for passage_point in passage_layer["objects"]:
+            passage_points.append(
+                PassagePoint(x=passage_point["x"], y=passage_point["y"], n_landmarks=passage_point["properties"][0]["value"])
+            )
+
+        route = ConcreteRoute(passage_points=passage_points)
+        route.build()
+        self.tilemap_scene  = OrthogonalTilemapScene(
+            OrthogonalTilemap(
+                tilemap_array,
+                tileset=Resource.image["tilesets"]["tileset_snow_forest"],
+                tile_size=8),
+            camera=self.camera)
 
         self.landmarks_scene = EntityScene(60,
-                                           camera=self.camera,
-                                           entities=[Village(pygame.math.Vector2(100, 100)),
-                                                     Village(pygame.math.Vector2(220, 125))])
+                                           camera=self.camera)
+                                           # entities=[Village(pygame.math.Vector2(pp.x, pp.y)) for pp in passage_points])
 
-        self.landmarks_scene.add_entities(LandmarkConnexion(*self.landmarks_scene.entities[:2]))
+        self.landmarks = []
+        for layer in route.placed_landmarks:
+            landmark_col = []
+            for landmark_desc in layer:
+                landmark = Village(pygame.math.Vector2(landmark_desc.x, landmark_desc.y))
+                landmark_col.append(landmark)
+                self.landmarks_scene.add_entities(landmark)
+            self.landmarks.append(landmark_col)
+
+        for col_i, row in enumerate(route.graph.columns):
+            for row_i, node in enumerate(row):
+                current_landmark = self.landmarks[col_i][row_i]
+                for dest_col, dest_row in node.destinations:
+                    self.landmarks_scene.add_entities(LandmarkConnexion(current_landmark, self.landmarks[dest_col][dest_row]))
 
         self.ui_scene = EntityScene(60,
                                     camera=self.camera,

@@ -6,7 +6,7 @@ from isec.environment.base import Camera
 from isec.environment import Sprite, Entity
 
 from game.battle_engine.models import Modifier
-from game.utils.oscillator import Oscillator
+from isec.utils.oscillator import Oscillator
 
 
 class ModifierSlot(Entity):

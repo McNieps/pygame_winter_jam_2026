@@ -5,8 +5,8 @@ from isec.app import Resource
 from isec.environment import Sprite, Entity
 
 from game.battle_engine.models import Weapon
-from game.utils.oscillator import Oscillator
-from game.utils.pie_reveal import apply_pie_mask
+from isec.utils.oscillator import Oscillator
+from isec.transforms.pie_reveal import apply_pie_mask
 from isec.environment.base import Camera
 
 
@@ -40,7 +40,7 @@ class WeaponSlot(Entity):
 
         self.oscillator.update(delta)
         self.update_image()
-        print(self.cooldown_remaining)
+
     def update_image(self):
         surface = Resource.image["item_slot"].copy()
         if self.weapon.icon:

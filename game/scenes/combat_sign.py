@@ -8,7 +8,7 @@ from game.entities.combat.data_sign import DataSign
 from game.entities.combat.weapon_slot import WeaponSlot
 from game.entities.combat.modifier_slot import ModifierSlot
 from game.battle_engine.models import Weapon
-from game.utils.oscillator import Oscillator
+from isec.utils.oscillator import Oscillator
 
 
 class CombatSign(EntityScene):

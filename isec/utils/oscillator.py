@@ -37,11 +37,3 @@ class Oscillator:
 
     def impulse(self, velocity: float):
         self.velocity += velocity
-
-
-if __name__ == '__main__':
-    x = Oscillator()
-    x.impulse(100)
-    for i in range(1000):
-        x.update(0.01)
-        print(x.value)

@@ -70,7 +70,7 @@ relentless_payoff = Modifier(
 
 team_a = Team(
     name="Team A", hp=100, max_hp=100,
-    weapons=[Weapon(name="Reactive Blade", base_damage=1, cooldown_ticks_max=20, modifiers=[count_strikes, relentless_payoff], icon="dagger")],
+    weapons=[Weapon(name="Reactive Blade", base_damage=1, cooldown_ticks_max=8, modifiers=[count_strikes, relentless_payoff], icon="dagger")],
 )
 team_b = Team(
     name="Team B", hp=100, max_hp=100,

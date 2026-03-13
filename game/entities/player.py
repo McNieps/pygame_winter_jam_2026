@@ -11,6 +11,7 @@ class Player(Entity):
 
         self.coords = start_landmark.coords
         self.money: int = 2
+        self.movement_over: bool = False
 
         self.inventory: list[str|None] = [None for i in range(16)]
 
@@ -20,3 +21,4 @@ class Player(Entity):
     def move(self, landmark: Landmark) -> None:
         self.position.xy = landmark.position
         self.coords = landmark.coords
+        self.movement_over = True

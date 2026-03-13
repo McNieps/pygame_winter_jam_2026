@@ -1,3 +1,5 @@
+from isec.app import Resource
+
 from isec.instance.base_instance import BaseInstance
 from isec.environment import EntityScene
 
@@ -57,7 +59,7 @@ class CombatInstance(BaseInstance):
                           enemy_team.id: self.right_combat_sign_scene}
 
         self.cancel_first_loop = True
-
+        Resource.sound["fight_start"].play()
     async def loop(self):
         if self.cancel_first_loop:
             self.cancel_first_loop = False
@@ -113,5 +115,11 @@ class CombatInstance(BaseInstance):
                     if event.weapon_id in sign.weapons:
                         sign.weapons[event.weapon_id].cooldown_remaining += event.new_value-event.old_value
 
-            # else:
-            #     print(event)
+            elif event.type == "battle_ended":
+                if event.winner_id == list(self.teams.keys())[0]:
+                    Resource.sound["fight_victory"].play()
+                else:
+                    Resource.sound["fight_defeat"].play()
+
+            else:
+                print(event)

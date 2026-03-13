@@ -1,17 +1,36 @@
 import pygame
 from typing import List
 
+from game.entities.ui.inventory_button import InventoryButton
+from game.instances.inventory_instance import InventoryInstance
+from game.instances.combat_instance import CombatInstance
+from game.instances.shop_instance import ShopInstance
 from isec.app import Resource
 from isec.instance.base_instance import BaseInstance
 from isec.environment.scene import OrthogonalTilemapScene, EntityScene
 from isec.environment.base import OrthogonalTilemap, Camera
 
+from game.battle_engine.models import Team, Weapon
 from game.entities.landmarks import landmark_dict, Landmark
 from game.entities.ui.landmark_connexion import LandmarkConnexion
 from game.entities.ui.landmark_info import LandmarkInfo
 from game.world_gen import MapGenerator
 from game.entities.combat.back_snow_layer import BackSnowLayer as FrontSnowLayer
 from game.entities.player import Player
+
+
+
+team_a = Team(
+    name="Team A", hp=100, max_hp=100,
+    weapons=[Weapon(name="Reactive Blade", base_damage=100, cooldown_ticks_max=8, modifiers=[], icon="dagger")],
+)
+team_b = Team(
+    name="Team B", hp=100, max_hp=100,
+    weapons=[Weapon(name="Predator Axe", base_damage=12, cooldown_ticks_max=5, modifiers=[], icon="dagger"),
+             Weapon(name="Predator Axe", base_damage=12, cooldown_ticks_max=5, modifiers=[], icon="dagger"),
+             Weapon(name="Predator Axe", base_damage=12, cooldown_ticks_max=5, modifiers=[], icon="dagger")],
+)
+
 
 class WorldMapInstance(BaseInstance):
     def __init__(self, map_name: str) -> None:
@@ -103,7 +122,7 @@ class WorldMapInstance(BaseInstance):
         """Set up the UI scene (landmark info panel)."""
         self.player = Player(self.landmarks[0][0])
         self.landmark_info = LandmarkInfo(self.player, self.map_layout)
-
+        self.inventory_button = InventoryButton()
         self.ui_scene = EntityScene(
             self.fps,
             camera=self.camera,
@@ -112,7 +131,7 @@ class WorldMapInstance(BaseInstance):
         self.snow_layer = FrontSnowLayer()
         self.snow_front_scene = EntityScene(
             self.fps,
-            entities=[self.snow_layer]
+            entities=[self.snow_layer, self.inventory_button]
         )
 
     # --------------------------------------------------------------------------
@@ -129,6 +148,7 @@ class WorldMapInstance(BaseInstance):
         self.window.fill(self.bg_color)
         self._update()
         self._render()
+        await self._handle_player_movement()
 
     # --------------------------------------------------------------------------
     # Input handling
@@ -138,6 +158,10 @@ class WorldMapInstance(BaseInstance):
         """Handle mouse button down: check landmark click or start drag."""
         cursor_world = self.event_handler.mouse_pos + self.camera
 
+        if self.inventory_button.rect.collidepoint(*self.event_handler.mouse_pos):
+            self.landmark_info.unfocus()
+            await InventoryInstance().execute()
+            return
         if self.landmark_info.go_button.active and self.landmark_info.go_button.rect.collidepoint(*cursor_world):
             self.player.move(self.landmark_info.landmark_focused)
             self.landmark_info.unfocus()
@@ -174,8 +198,6 @@ class WorldMapInstance(BaseInstance):
         self.camera.x = max(0.0, min(self._map_max_x, self.camera.x))
         self.camera.y = max(0.0, min(self._map_max_y, self.camera.y))
 
-
-
         self.snow_layer.scroll(*(initial_cam_pos-self.camera))
 
     # --------------------------------------------------------------------------
@@ -193,3 +215,9 @@ class WorldMapInstance(BaseInstance):
         self.landmarks_scene.render()
         self.ui_scene.render()
         self.snow_front_scene.render()
+
+    async def _handle_player_movement(self):
+        if self.player.movement_over:
+            await CombatInstance(team_a, team_b).execute()
+
+        self.player.movement_over = False

@@ -135,6 +135,16 @@ class BattleEngine:
                     source_team_id=attacker.id,
                 ))
 
+                events.append(CooldownChanged(
+                    tick=state.tick,
+                    weapon_id=weapon.id,
+                    old_value=weapon.cooldown_ticks_current,
+                    new_value=weapon.cooldown_ticks_current-weapon.cooldown_ticks_max,
+                ))
+
+                # Reset elapsed counter — weapon just fired, must wait full cooldown again
+                weapon.cooldown_ticks_current -= weapon.cooldown_ticks_max
+
                 # ON_WEAPON_FIRE trigger
                 ctx_fire = TriggerContext(
                     trigger=EventTrigger.ON_WEAPON_FIRE,
@@ -148,8 +158,6 @@ class BattleEngine:
                 damage = weapon.base_damage
                 self._apply_damage(state, weapon, attacker, defender, damage, events, rng)
 
-                # Reset elapsed counter — weapon just fired, must wait full cooldown again
-                weapon.cooldown_ticks_current = 0
 
     def _apply_damage(
         self,

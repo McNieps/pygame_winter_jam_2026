@@ -40,7 +40,7 @@ class WeaponSlot(Entity):
 
         self.oscillator.update(delta)
         self.update_image()
-
+        print(self.cooldown_remaining)
     def update_image(self):
         surface = Resource.image["item_slot"].copy()
         if self.weapon.icon:
@@ -57,7 +57,6 @@ class WeaponSlot(Entity):
 
     def display_activation(self) -> None:
         self.oscillator.impulse((random.randint(0, 1)*2-1)*750)
-        self.cooldown_remaining -= self.weapon.cooldown_ticks_max
 
     def render(self,
                camera: Camera,

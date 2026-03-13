@@ -108,5 +108,5 @@ class CombatInstance(BaseInstance):
                     if event.weapon_id in sign.weapons:
                         sign.weapons[event.weapon_id].cooldown_remaining += event.new_value-event.old_value
 
-            else:
-                print(event)
+            # else:
+            #     print(event)

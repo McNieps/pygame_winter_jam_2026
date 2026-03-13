@@ -24,18 +24,26 @@ class CombatInstance(BaseInstance):
 
         self.time_since_last_tick = -2
         self.tick = 0
-        super().__init__(120)
+        super().__init__()
         self.battle_engine = BattleEngine()
         self.battle_state = BattleState(team_a=player_team, team_b=enemy_team)
 
         self.iron_bar = IronBar()
-        self.background_scene = EntityScene(120, entities=[CombatBackground(), BackSnowLayer(), self.iron_bar, CombatFloor()])
+        self.background_scene = EntityScene(
+            self.fps,
+            entities=[
+                CombatBackground(),
+                BackSnowLayer(),
+                self.iron_bar,
+                CombatFloor()]
+        )
+
         self.left_health_bar = HealthBar("left", player_team)
         self.right_health_bar = HealthBar("right", enemy_team)
         self.left_combat_sign_scene = CombatSign("left", player_team.weapons)
         self.right_combat_sign_scene = CombatSign("right", enemy_team.weapons)
 
-        self.foreground_scene = EntityScene(120, entities=[FrontSnowLayer(),
+        self.foreground_scene = EntityScene(self.fps, entities=[FrontSnowLayer(),
                                                                self.left_health_bar,
                                                                self.right_health_bar])
 

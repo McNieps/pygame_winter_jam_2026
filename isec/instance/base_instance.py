@@ -7,13 +7,12 @@ from isec.instance.handlers import LoopHandler, EventHandler
 
 
 class BaseInstance:
-    def __init__(self,
-                 fps: int = None):
+    def __init__(self):
+        instance_dict: dict = Resource.data["instance"][self.__class__.__name__]
 
-        if fps is None:
-            fps = Resource.data["instances"]["default"]["fps"]
+        fps = instance_dict.get("fps", Resource.data["instance"]["default"]["fps"])
+        key_dict = instance_dict["controls"]
 
-        key_dict = Resource.data["instance"][self.__class__.__name__]["controls"]
         try:
             key_dict.update(Resource.data["instance"]["BaseInstance"])
         except KeyError:

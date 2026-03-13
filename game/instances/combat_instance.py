@@ -84,8 +84,6 @@ class CombatInstance(BaseInstance):
     def handle_tick_events(self, events: list[BattleEvent]):
         self.tick += 1
 
-
-
         for event in events:
             if event.type == "tick_advanced":
                 self.iron_bar.set_snow_progression(self.tick/100)
@@ -97,7 +95,6 @@ class CombatInstance(BaseInstance):
                 team_health_bar = self.team_health[event.target_team_id]
                 team_health_bar.update_health(event.target_hp_after)
                 self.team_sign[event.target_team_id].shake_sign(event.final_damage/team_health_bar.max_health)
-
 
             elif event.type == "weapon_fired":
                 self.team_sign[event.team_id].display_weapon_activation(event.weapon_id)

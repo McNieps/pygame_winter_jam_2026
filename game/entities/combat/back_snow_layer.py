@@ -19,4 +19,8 @@ class BackSnowLayer(Entity):
         self.dx, self.dy = self.dx + self.SCROLL_SPEED_X*delta, self.dy + self.SCROLL_SPEED_Y*delta
         dx, self.dx = int(self.dx // 1), self.dx % 1
         dy, self.dy = int(self.dy // 1), self.dy % 1
-        self.sprite.surface.scroll(dy, dx, 1)
+        self.sprite.surface.scroll(dx, dy, 1)
+
+    def scroll(self, dx, dy) -> None:
+        self.dx += dx
+        self.dy += dy

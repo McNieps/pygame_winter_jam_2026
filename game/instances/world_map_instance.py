@@ -1,16 +1,16 @@
 import pygame
-from typing import List, Optional
+from typing import List
 
 from isec.app import Resource
 from isec.instance.base_instance import BaseInstance
 from isec.environment.scene import OrthogonalTilemapScene, EntityScene
 from isec.environment.base import OrthogonalTilemap, Camera
 
-from game.entities.landmarks.landmark import Landmark
-from game.entities.landmarks.village import Village
-from game.entities.landmarks.landmark_connexion import LandmarkConnexion
+from game.entities.landmarks import landmark_dict, Landmark
+from game.entities.ui.landmark_connexion import LandmarkConnexion
 from game.entities.ui.landmark_info import LandmarkInfo
-from game.world_gen import ConcreteRoute, PassagePoint
+from game.world_gen import MapGenerator
+from game.entities.combat.back_snow_layer import BackSnowLayer as FrontSnowLayer
 
 
 class WorldMapInstance(BaseInstance):
@@ -22,6 +22,7 @@ class WorldMapInstance(BaseInstance):
         self.camera = Camera()
         self.landmark_info = LandmarkInfo(None)
         self.landmarks: List[List[Landmark]] = []
+        self.map_layout = MapGenerator()
 
         # Register event handlers
         self.event_handler.register_callback("click", "down", self._start_click)
@@ -49,16 +50,18 @@ class WorldMapInstance(BaseInstance):
 
         # Build passage points
         passage_points = []
+        landmarks_per_step = []
         for obj in passage_layer["objects"]:
-            # Extract properties (assumes first property contains number of landmarks)
             n_landmarks = obj["properties"][0]["value"] if obj["properties"] else 1
-            passage_points.append(
-                PassagePoint(x=obj["x"], y=obj["y"], n_landmarks=n_landmarks)
-            )
+            landmarks_per_step.append(n_landmarks)
+            passage_points.append((obj["x"], obj["y"]))
 
-        # Build route graph
-        self.route = ConcreteRoute(passage_points=passage_points)
-        self.route.build()
+        self.map_layout.generate_structure(len(landmarks_per_step), landmarks_per_step)
+        self.map_layout.generate_map_layout(passage_points)
+        self.map_layout.affect_node_type()
+        # self.route = ConcreteRoute(passage_points=passage_points)
+        # self.route.build()
+        # self.route.graph.assign_landmarks()
 
     def _create_scenes(self) -> None:
         """Create all rendering scenes: tilemap, landmarks, connections, UI."""
@@ -72,30 +75,30 @@ class WorldMapInstance(BaseInstance):
         tilemap = OrthogonalTilemap(
             self.tilemap_array,
             tileset=tileset,
-            tile_size=self.TILE_SIZE
+            tile_size=8
         )
         self.tilemap_scene = OrthogonalTilemapScene(tilemap, camera=self.camera)
 
     def _create_landmarks_and_connections(self) -> None:
         """Instantiate landmarks and their connections based on the route graph."""
-        self.landmarks_scene = EntityScene(self.TARGET_FPS, camera=self.camera)
+        self.landmarks_scene = EntityScene(self.fps, camera=self.camera)
         self.landmarks = []
 
         # Create landmarks
-        for col, layer in enumerate(self.route.placed_landmarks):
+        for layer in self.map_layout.map:
             landmark_column = []
-            for landmark_desc in layer:
-                pos = pygame.math.Vector2(landmark_desc.x, landmark_desc.y)
-                landmark = Village(pos)
+            for landmark_node in layer:
+                pos = pygame.math.Vector2(landmark_node.position)
+                landmark = landmark_dict[landmark_node.name](pos)
                 landmark_column.append(landmark)
                 self.landmarks_scene.add_entities(landmark)
             self.landmarks.append(landmark_column)
 
         # Create connections
-        for col_i, row in enumerate(self.route.graph.columns):
-            for row_i, node in enumerate(row):
-                current = self.landmarks[col_i][row_i]
-                for dest_col, dest_row in node.destinations:
+        for layer_i, layer in enumerate(self.map_layout.map):
+            for node_i, node in enumerate(layer):
+                current = self.landmarks[layer_i][node_i]
+                for dest_col, dest_row in node.connections:
                     connection = LandmarkConnexion(
                         current,
                         self.landmarks[dest_col][dest_row]
@@ -105,9 +108,14 @@ class WorldMapInstance(BaseInstance):
     def _create_ui_scene(self) -> None:
         """Set up the UI scene (landmark info panel)."""
         self.ui_scene = EntityScene(
-            self.TARGET_FPS,
+            self.fps,
             camera=self.camera,
-            entities=[self.landmark_info]
+            entities=[self.landmark_info, ]
+        )
+        self.snow_layer = FrontSnowLayer()
+        self.snow_front_scene = EntityScene(
+            self.fps,
+            entities=[self.snow_layer]
         )
 
     # --------------------------------------------------------------------------
@@ -157,9 +165,15 @@ class WorldMapInstance(BaseInstance):
             self._map_max_x = tilemap.width * tilemap.tile_size - self.window.width
             self._map_max_y = tilemap.height * tilemap.tile_size - self.window.height
 
+        initial_cam_pos = self.camera.copy()
+
         self.camera -= pygame.math.Vector2(self.event_handler.mouse_rel)
         self.camera.x = max(0.0, min(self._map_max_x, self.camera.x))
         self.camera.y = max(0.0, min(self._map_max_y, self.camera.y))
+
+
+
+        self.snow_layer.scroll(*(initial_cam_pos-self.camera))
 
     # --------------------------------------------------------------------------
     # Update and render
@@ -168,9 +182,11 @@ class WorldMapInstance(BaseInstance):
     def _update(self) -> None:
         """Update all scenes."""
         self.ui_scene.update(self.delta)
+        self.snow_front_scene.update(self.delta)
 
     def _render(self) -> None:
         """Render all scenes in order."""
         self.tilemap_scene.render()
         self.landmarks_scene.render()
         self.ui_scene.render()
+        self.snow_front_scene.render()

@@ -12,11 +12,11 @@
             "scaleInEditor": 16
         },
         "map_test.tmj": {
-            "scale": 4,
-            "selectedLayer": 0,
+            "scale": 1.5,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 534.75,
-                "y": 330.375
+                "x": 219.33333333333331,
+                "y": 153.66666666666669
             }
         },
         "test.tsx": {
